@@ -2,7 +2,7 @@
 
 An end-to-end NBA data engineering and analytics project that integrates player performance, team performance, salaries, salary-cap data, and historical trades into a PostgreSQL warehouse, transforms the data with dbt, and surfaces insights through an interactive Tableau dashboard.
 
-**Tech Stack:** Python · PostgreSQL · SQL · dbt · pandas · DuckDB · Tableau
+**Tech Stack:** Python · PostgreSQL · SQL · dbt · pandas · DuckDB · Tableau · Git
 
 ## Live Dashboard
 
