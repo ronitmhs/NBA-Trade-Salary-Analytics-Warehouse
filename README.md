@@ -1,32 +1,56 @@
 # NBA Trade & Salary Analytics Warehouse
 
-An end-to-end NBA analytics engineering project that combines player performance, team performance, salaries, salary-cap context, and historical trades in a relational data warehouse.
+An end-to-end NBA data engineering and analytics project that integrates player performance, team performance, salaries, salary-cap data, and historical trades into a PostgreSQL warehouse, transforms the data with dbt, and surfaces insights through an interactive Tableau dashboard.
 
-The project uses **Python, PostgreSQL, SQL, dbt, and Tableau** to build a reproducible analytics pipeline for evaluating player value, team payroll efficiency, and trade acquisitions.
+**Tech Stack:** Python · PostgreSQL · SQL · dbt · pandas · DuckDB · Tableau
+
+## Live Dashboard
+
+**[View the Interactive Tableau Dashboard](https://public.tableau.com/app/profile/ronit.shah2178/viz/NBATradeSalaryAnalytics/Dashboard1)**
+
+The dashboard explores three core areas:
+
+- **Player Value** — Which players produce the most relative to their salary?
+- **Team Payroll Efficiency** — Which teams convert payroll spending into wins most efficiently?
+- **Trade Acquisition Value** — Which traded players provide the strongest salary-adjusted production?
+
+---
 
 ## Project Overview
 
-NBA roster decisions involve more than comparing raw player statistics. Teams must balance player production, salary commitments, salary-cap constraints, team performance, and the value received through trades.
+NBA roster decisions involve more than comparing player statistics. Teams must balance performance, contracts, salary-cap constraints, team success, and the value exchanged through trades.
 
-This project builds an analytics warehouse designed to answer questions such as:
+This project builds an analytics warehouse that brings those datasets together into a consistent analytical model.
 
-- Which players provide the most production relative to their salary?
-- Which teams convert payroll spending into wins most efficiently?
-- Which trade acquisitions provide strong salary-adjusted production?
-- How does player production change across seasons surrounding a trade?
-- How have NBA salaries and salary-cap commitments changed over time?
+It is designed to answer questions such as:
 
-The project currently covers:
+- Which players outperform their salary level?
+- Which teams get the most wins from their payroll?
+- Which trade acquisitions provide strong value relative to cost?
+- How does player production compare with salary across seasons?
+- How do payroll efficiency and player value differ across the league?
 
-- **26 seasons of player and team statistics from 2000-01 through 2025-26**
-- **17 seasons of salary data from 2009-10 through 2025-26**
-- **737 NBA trades from 2014 through September 2026**
-- **5,198 players**
-- **30 NBA teams**
-- **12,810 player-season records**
-- **776 team-season records**
-- **9,519 salary records loaded into PostgreSQL**
-- **3,432 normalized trade assets**
+The pipeline takes data from raw sources through extraction, validation, transformation, warehouse modeling, dbt, and visualization.
+
+---
+
+## Data Coverage
+
+| Dataset | Coverage |
+|---|---:|
+| Player statistics | 26 seasons |
+| Team statistics | 26 seasons |
+| Salary data | 17 seasons |
+| Player-season records | 12,810 |
+| Team-season records | 776 |
+| Salary records | 9,519 |
+| Historical trades | 737 |
+| Trade-team relationships | 1,594 |
+| Normalized trade assets | 3,432 |
+| Trade-player candidates | 1,507 |
+| Resolved trade-player assets | 1,491 |
+
+Player and team performance data spans **2000-01 through 2025-26**, with historical trade data covering **2014 through September 2026**.
 
 ---
 
@@ -34,24 +58,30 @@ The project currently covers:
 
 ```text
 NBA Data Sources
-      |
-      v
+        |
+        v
 Python Extraction
-      |
-      v
-Validation & Transformation
-      |
-      v
-PostgreSQL Data Warehouse
-      |
-      v
-dbt
-  |-- Staging Models
-  |-- Intermediate Models
-  `-- Analytics Marts
-      |
-      v
-Tableau
+        |
+        v
+Cleaning & Validation
+        |
+        v
+Entity Resolution
+        |
+        v
+PostgreSQL Warehouse
+        |
+        v
+dbt Transformation Layer
+   |-- Staging
+   |-- Intermediate
+   `-- Analytics Marts
+        |
+        v
+Tableau Extracts
+        |
+        v
+Tableau Public Dashboard
 ```
 
 ### Technology Stack
@@ -59,50 +89,46 @@ Tableau
 | Layer | Technology |
 |---|---|
 | Extraction | Python, pandas |
-| Data validation | Python, pandas |
-| External analytical data access | DuckDB |
-| Warehouse | PostgreSQL |
-| Transformation | SQL, dbt |
-| Data quality | Python validation + dbt tests |
-| Analytics | PostgreSQL SQL |
-| Visualization | Tableau |
+| Validation & transformation | Python, pandas |
+| Analytical data access | DuckDB |
+| Data warehouse | PostgreSQL |
+| Analytics transformation | SQL, dbt |
+| Data quality | Python validation, dbt tests |
+| Visualization | Tableau Public |
 | Version control | Git, GitHub |
 
 ---
 
 ## Data Pipeline
 
-### 1. Extraction
+### Extraction
 
-Python extraction scripts collect and standardize:
+Python scripts collect and standardize:
 
 - NBA player reference data
 - NBA team reference data
 - Player season statistics
 - Team season statistics
-- Historical salary data
+- Historical player salaries
 - Salary-cap and luxury-tax thresholds
-- Historical trade transactions
+- Historical NBA trades
 
-Raw data is retained separately from processed warehouse-ready datasets.
+Raw data is kept separate from processed warehouse-ready datasets to preserve pipeline reproducibility.
 
-### 2. Validation
+### Validation
 
-Validation scripts check data before warehouse loading.
+Validation is performed before warehouse loading to identify issues such as:
 
-Examples include:
+- duplicate records
+- missing identifiers
+- schema inconsistencies
+- incomplete season coverage
+- salary-cap coverage gaps
+- salary-to-player matching failures
+- invalid trade-team mappings
+- unresolved player identities
 
-- duplicate player detection
-- duplicate team detection
-- expected schema validation
-- salary-cap coverage
-- player-ID coverage
-- salary-to-player-stat join coverage
-- trade-team normalization
-- trade asset classification
-- player identity resolution
-
-Player statistics validation produced:
+Player statistics validation:
 
 ```text
 Season files: 26
@@ -110,7 +136,7 @@ Player-season rows: 12,810
 Issues found: 0
 ```
 
-Team statistics validation produced:
+Team statistics validation:
 
 ```text
 Season files: 26
@@ -118,75 +144,92 @@ Team-season rows: 776
 Issues found: 0
 ```
 
-Salary data achieved approximately **96.4% NBA player-ID coverage** before warehouse-specific reconciliation.
-
 ---
 
-## Trade Entity Resolution
+## Trade Processing & Entity Resolution
 
-Trade data is particularly messy because transactions contain players, draft picks, pick swaps, cash, draft rights, trade exceptions, aliases, and historical naming variations.
+Historical trade data is significantly less structured than standard player and team statistics.
 
-The pipeline normalizes **737 trades** into:
+Individual transaction descriptions can contain:
+
+- players
+- draft picks
+- draft rights
+- pick swaps
+- cash considerations
+- trade exceptions
+- alternate names
+- nicknames
+- suffix variations
+- ambiguous historical identities
+
+The trade pipeline parses **737 historical trades** into normalized warehouse entities:
 
 ```text
-737 trades
- |
- |-- 1,594 trade/team relationships
- |
- `-- 3,432 trade assets
-       |
-       |-- player assets
-       |-- draft picks
-       |-- draft rights
-       |-- pick swaps
-       |-- cash
-       |-- trade exceptions
-       `-- other assets
+737 Trades
+    |
+    |-- 1,594 Trade-Team Relationships
+    |
+    `-- 3,432 Trade Assets
+            |
+            |-- Players
+            |-- Draft Picks
+            |-- Draft Rights
+            |-- Pick Swaps
+            |-- Cash
+            |-- Trade Exceptions
+            `-- Other Assets
 ```
 
-Player identities are resolved using:
+### Player Identity Resolution
+
+Trade-player identities are resolved using deterministic matching rather than unrestricted fuzzy matching.
+
+The resolver uses:
 
 1. normalized exact-name matching
-2. version-controlled aliases
-3. explicit NBA player IDs for ambiguous historical names
+2. version-controlled player aliases
+3. explicit NBA player IDs for ambiguous identities
+4. manual review when an identity cannot be safely inferred
 
-The resolver intentionally avoids blind fuzzy matching.
-
-### Resolution Results
+Resolution results:
 
 ```text
 Player candidates: 1,507
-Exact matches: 1,375
-Alias matches: 116
-Total matched: 1,491
-Unmatched: 16
-Match coverage: 98.94%
-Invalid aliases: 0
+Exact matches:     1,375
+Alias matches:       116
+Total matched:     1,491
+Unmatched:            16
+
+Match coverage:    98.94%
+Invalid aliases:        0
 ```
 
-Ambiguous or unverifiable identities remain unresolved rather than being assigned an unsafe player ID.
+Uncertain identities are intentionally left unresolved instead of being assigned an unreliable player ID.
 
 ---
 
 ## PostgreSQL Warehouse
 
-The warehouse uses normalized relational tables with primary keys, foreign keys, indexes, and validation constraints.
+Processed datasets are loaded into a normalized PostgreSQL warehouse with primary keys, foreign keys, indexes, and relational constraints.
 
-Core tables include:
+### Core Tables
 
 ```text
 players
 teams
 seasons
+
 player_season_stats
 team_season_stats
 player_salaries
+
 trades
 trade_teams
 trade_assets
 ```
 
-### Example Relationships
+### Core Relationships
 
 ```text
 players
@@ -196,6 +239,7 @@ players
    +---- player_salaries
    |
    `---- trade_assets
+
 
 teams
    |
@@ -207,6 +251,7 @@ teams
    |
    `---- trade_assets
 
+
 seasons
    |
    +---- player_season_stats
@@ -215,17 +260,27 @@ seasons
    `---- trades
 ```
 
-Foreign-key constraints protect player, team, season, salary, and trade relationships.
+The trade portion of the warehouse contains:
+
+```text
+Trades:                    737
+Trade/team relationships: 1,594
+Trade assets:             3,432
+Player assets:            1,507
+Resolved player assets:   1,491
+Unresolved player assets:    16
+Multi-team trades:           96
+```
 
 ---
 
 ## dbt Analytics Layer
 
-dbt transforms the PostgreSQL warehouse into analytics-ready models.
+dbt provides the transformation and semantic layer between the normalized warehouse and downstream analytics.
 
-### Staging
+### Staging Models
 
-Nine staging models expose clean warehouse entities:
+Nine staging models standardize the warehouse sources:
 
 ```text
 stg_players
@@ -239,21 +294,17 @@ stg_trade_teams
 stg_trade_assets
 ```
 
-### Intermediate
-
-Reusable business logic is separated into intermediate transformations.
-
-Current model:
+### Intermediate Model
 
 ```text
 int_player_season_value
 ```
 
-This combines player performance and salary information at the player-season grain.
+This model combines player performance, salary, and salary-cap information at the player-season grain.
 
 ### Analytics Marts
 
-Three core marts are currently available:
+Three analytics marts power the final analyses and Tableau dashboard:
 
 ```text
 mart_player_value
@@ -261,16 +312,16 @@ mart_team_payroll_efficiency
 mart_trade_acquisition_value
 ```
 
-These tables are designed to serve downstream BI and visualization tools.
+This separation keeps warehouse storage, transformation logic, and analytical presentation independent from one another.
 
 ---
 
-## Automated Data Quality
+## Data Quality
 
-dbt tests validate:
+Automated dbt tests validate:
 
-- primary identifiers
-- required fields
+- required identifiers
+- non-null business fields
 - uniqueness
 - player relationships
 - team relationships
@@ -278,7 +329,7 @@ dbt tests validate:
 - trade relationships
 - analytics mart integrity
 
-The complete V1 dbt DAG currently passes:
+The complete dbt DAG passes end-to-end:
 
 ```text
 PASS=97
@@ -288,37 +339,53 @@ SKIP=0
 TOTAL=97
 ```
 
-This includes **13 dbt models**, **85 data tests**, and **9 warehouse sources**.
+The dbt project contains:
+
+```text
+13 models
+85 data tests
+9 warehouse sources
+```
 
 ---
 
-## Analytics
-
-### Player Value
+## Player Value Analytics
 
 `mart_player_value` compares player production with salary commitments within each season.
 
-The current V1 production score is:
+The current production metric is intentionally simple and interpretable:
 
 ```text
-PTS + REB + AST + STL + BLK
+Production Score =
+    Points
+  + Rebounds
+  + Assists
+  + Steals
+  + Blocks
 ```
 
-Players are ranked using salary and production percentiles.
+Players are evaluated relative to the rest of the league using salary and production percentiles:
 
 ```text
-value_gap =
-    production_percentile
-    - salary_percentile
+Value Gap =
+    Production Percentile
+  - Salary Percentile
 ```
 
-A positive value gap indicates that a player's production percentile exceeds their salary percentile.
+A positive `Value Gap` indicates that a player's production percentile exceeds their salary percentile.
 
-For example, the 2025-26 analysis identifies players including Russell Westbrook, Maxime Raynaud, Toumani Camara, Collin Gillespie, and Keyonte George among the highest salary-adjusted production values in the dataset.
+The dashboard uses this model to visualize:
 
-### Team Payroll Efficiency
+- salary vs. production
+- salary-adjusted value
+- Top 10 player values
+- season-level comparisons
 
-`mart_team_payroll_efficiency` evaluates how efficiently teams convert payroll spending into wins.
+---
+
+## Team Payroll Efficiency
+
+`mart_team_payroll_efficiency` evaluates how efficiently NBA teams convert payroll spending into regular-season wins.
 
 Metrics include:
 
@@ -331,57 +398,92 @@ Metrics include:
 - wins rank
 - efficiency rank
 
-For 2025-26, the model ranks Oklahoma City first in payroll-per-win efficiency, followed by San Antonio and Detroit.
+The Tableau dashboard combines payroll and team-performance data to identify teams producing stronger results relative to their spending.
 
-### Trade Acquisition Value
+---
 
-`mart_trade_acquisition_value` connects:
+## Trade Acquisition Analytics
 
-```text
-Trade
-  |
-  v
-Receiving Team
-  |
-  v
-Acquired Player
-  |
-  +-- Salary
-  +-- Salary Cap %
-  +-- Production
-  +-- Salary Percentile
-  +-- Production Percentile
-  `-- Value Gap
-```
+`mart_trade_acquisition_value` connects each resolved player acquisition with:
 
-This enables salary-adjusted analysis of players acquired through trades.
+- trade
+- trade date
+- receiving team
+- player salary
+- salary-cap percentage
+- season production
+- salary percentile
+- production percentile
+- value gap
+
+Trade acquisitions are preserved at the acquisition level rather than being aggregated only by player.
+
+This matters when a player appears in multiple transactions during the same season: each acquisition remains a separate analytical record.
+
+The dashboard visualizes:
+
+- acquisition salary vs. production
+- salary-adjusted acquisition value
+- receiving-team context
+- Top 10 trade acquisitions
+- season-level trade analysis
+
+---
+
+## Tableau Dashboard
+
+**[Launch the Interactive Dashboard](https://public.tableau.com/app/profile/ronit.shah2178/viz/NBATradeSalaryAnalytics/Dashboard1)**
+
+The Tableau Public dashboard is organized into three analytical sections.
+
+### Player Value
+
+- NBA player salary vs. production
+- Salary-adjusted value visualization
+- Top 10 salary-adjusted player values
+- Interactive season selection
+
+### Team Payroll Efficiency
+
+- Team payroll vs. wins
+- Payroll efficiency visualization
+- Payroll cost per win
+- Top 10 payroll-efficient teams
+- Interactive season selection
+
+### Trade Analytics
+
+- Trade acquisition salary vs. production
+- Acquisition-level value analysis
+- Top 10 trade acquisitions
+- Receiving-team context
+- Interactive season selection
+
+The dashboard uses extracts generated from the tested dbt analytics marts.
 
 ---
 
 ## Advanced SQL
 
-The repository includes analytical SQL demonstrating:
+The repository includes analytical SQL using:
 
 - multi-table joins
 - common table expressions
-- aggregation
+- aggregations
+- window functions
 - `LAG()`
 - `RANK()`
 - `PERCENT_RANK()`
 - `PARTITION BY`
-- season-over-season comparisons
 - salary-cap normalization
-- payroll efficiency analysis
-- trade acquisition analysis
+- season-over-season comparisons
 
 Example analyses include:
 
-```text
-Player salary value rankings
-Team payroll efficiency
-Traded-player season-over-season performance
-Trade acquisition value
-```
+- player salary value rankings
+- team payroll efficiency
+- traded-player performance
+- trade acquisition value
 
 ---
 
@@ -393,7 +495,8 @@ NBA-Trade-Salary-Analytics-Warehouse/
 |-- data/
 |   |-- raw/
 |   |-- processed/
-|   `-- reference/
+|   |-- reference/
+|   `-- tableau/
 |
 |-- src/
 |   |-- extract/
@@ -406,6 +509,7 @@ NBA-Trade-Salary-Analytics-Warehouse/
 |
 |-- dbt/
 |   `-- nba_analytics/
+|       |
 |       |-- models/
 |       |   |-- staging/
 |       |   |-- intermediate/
@@ -424,155 +528,113 @@ NBA-Trade-Salary-Analytics-Warehouse/
 
 ---
 
-## Running the dbt Project
+## Running the Project
 
-From the dbt project directory:
+### Environment
+
+Install the Python dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+The warehouse uses PostgreSQL with the database:
+
+```text
+nba_analytics
+```
+
+### dbt
+
+Navigate to the dbt project:
 
 ```bash
 cd dbt/nba_analytics
 ```
 
-Verify the connection:
+Verify the database connection:
 
 ```bash
 dbt debug
 ```
 
-Build the complete analytics DAG:
+Build and test the complete analytics DAG:
 
 ```bash
 dbt build
 ```
 
-A successful V1 build currently completes all 97 resources without warnings or errors.
+A successful build currently completes all **97 resources with zero warnings or errors**.
+
+### Tableau Extracts
+
+Tableau Public uses CSV extracts generated from the final dbt marts:
+
+```bash
+psql nba_analytics -c "\copy analytics.mart_player_value TO 'data/tableau/mart_player_value.csv' CSV HEADER"
+
+psql nba_analytics -c "\copy analytics.mart_team_payroll_efficiency TO 'data/tableau/mart_team_payroll_efficiency.csv' CSV HEADER"
+
+psql nba_analytics -c "\copy analytics.mart_trade_acquisition_value TO 'data/tableau/mart_trade_acquisition_value.csv' CSV HEADER"
+```
+
+These extracts preserve the dbt marts as the source of truth while allowing the visualization layer to be published through Tableau Public.
 
 ---
 
-## Methodology Notes
+## Methodology & Limitations
 
 ### Full-Season Performance
 
-Player statistics are currently stored at the **player-season grain**.
+Player performance is currently modeled at the **player-season grain**.
 
-Trade analyses therefore use full-season performance and should not be interpreted as exact pre-trade versus post-trade splits.
+Trade analyses therefore use full-season statistics rather than exact pre-trade and post-trade performance splits.
 
-A player traded multiple times within the same season can appear in multiple trade events associated with the same full-season performance record.
-
-### Salary Records
-
-Historical salary sources can contain:
-
-- partial salary records
-- players missing NBA IDs
-- multiple salary records for the same player-season
-- players not represented in the primary player dimension
-
-The pipeline preserves these realities rather than silently forcing invalid joins.
-
-### Player Value Metric
-
-The current V1 production score is intentionally simple and transparent.
-
-It does **not fully capture defensive impact**, off-ball value, matchup difficulty, rim deterrence, screening, or other contributions that are poorly represented by basic box-score statistics.
-
-Players whose value is heavily defensive may therefore be underrated by V1.
-
----
-
-## V2 Roadmap
-
-Planned improvements include:
-
-- advanced defensive impact metrics
-- separate offensive and defensive value scores
-- improved representation of defensive specialists
-- richer player impact metrics
-- exact pre/post-trade performance splits where data permits
-- additional trade asset analysis
-- expanded historical analytics
-
-Examples of players motivating the defensive-impact upgrade include defensive specialists whose value is not adequately represented by basic box-score production.
-
----
-
-## Tableau Dashboard
-
-The V1 visualization layer is currently being developed in Tableau.
-
-Planned dashboard sections include:
+A player involved in multiple transactions during one season can appear in multiple acquisition records associated with the same season-level performance.
 
 ### Player Value
 
-- salary vs. production
-- salary percentile vs. production percentile
-- value-gap rankings
-- player and season filters
+The current production score emphasizes traditional box-score statistics.
 
-### Team Payroll Efficiency
+It does not fully represent contributions such as:
 
-- payroll vs. wins
-- payroll per win
-- team efficiency rankings
-- historical payroll trends
+- defensive positioning
+- rim deterrence
+- matchup difficulty
+- defensive versatility
+- off-ball impact
+- screen setting
+- other contributions not captured by traditional box scores
 
-### Trade Analytics
-
-- trade acquisition value
-- salary acquired
-- production acquired
-- salary-adjusted acquisition rankings
-
-The Tableau layer will connect directly to the dbt analytics marts in PostgreSQL.
+Players whose impact is heavily defensive may therefore be undervalued by the current metric.
 
 ---
 
-## Project Status
+## Future Improvements
 
-### Completed
+Potential extensions include:
 
-- Python extraction pipeline
-- historical player statistics
-- historical team statistics
-- salary ingestion
-- salary-cap normalization
-- trade ingestion
-- trade normalization
-- player entity resolution
-- PostgreSQL warehouse
-- relational constraints and indexes
-- advanced SQL analytics
-- dbt staging layer
-- dbt intermediate transformations
-- dbt analytics marts
-- automated dbt testing
-- successful end-to-end dbt build
+- incorporating advanced defensive-impact metrics into player valuation
+- separating offensive and defensive components of player value
+- adding exact pre-trade and post-trade performance splits
+- expanding draft-pick and pick-swap valuation
+- incorporating richer player-impact metrics
+- evaluating trade outcomes across longer post-trade windows
+- expanding historical trend analysis
 
-### In Progress
-
-- Tableau dashboard
-- final project documentation and visualizations
-
-### Planned V2
-
-- defensive-impact analytics
-- richer player-value methodology
-- additional advanced NBA metrics
+A particularly useful extension would be incorporating defensive-impact data so that players whose value is not fully represented by traditional box-score production can be evaluated more accurately.
 
 ---
 
-## Key Engineering Highlights
+## Engineering Highlights
 
-- Built a normalized PostgreSQL warehouse spanning player performance, team performance, salaries, salary-cap context, and trades.
-- Processed **12,810 player-season records** across 26 seasons.
+- Built an end-to-end analytics pipeline with **Python, PostgreSQL, SQL, dbt, and Tableau**.
+- Processed **12,810 player-season records** spanning 26 NBA seasons.
+- Integrated **9,519 historical salary records** with performance and salary-cap context.
 - Normalized **737 historical trades** into **3,432 individual trade assets**.
-- Achieved **98.94% deterministic trade-player identity resolution** without blind fuzzy matching.
-- Implemented dbt staging, intermediate, and mart layers.
-- Added **85 automated dbt data tests** across warehouse relationships and analytics models.
-- Validated the complete dbt DAG with **97/97 successful resources**.
-- Developed advanced SQL analyses using CTEs and analytical window functions including `LAG()`, `RANK()`, and `PERCENT_RANK()`.
-
----
-
-## Future Work
-
-The immediate next milestone is completing the Tableau visualization layer. After V1 is finalized, the project will expand toward richer defensive-impact modeling and additional advanced player-value metrics.
+- Achieved **98.94% deterministic trade-player identity resolution** without unrestricted fuzzy matching.
+- Designed a normalized relational warehouse with primary keys, foreign keys, indexes, and validation constraints.
+- Built staging, intermediate, and analytics layers using dbt.
+- Implemented **85 automated dbt data tests**.
+- Validated the complete transformation DAG with **97/97 successful resources**.
+- Built and published an interactive Tableau dashboard covering player value, team payroll efficiency, and trade acquisition analytics.
