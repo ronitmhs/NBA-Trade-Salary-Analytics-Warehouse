@@ -1,5 +1,3 @@
-# NBA-Trade-Salary-Analytics-Warehouse
-
 # NBA Trade & Salary Analytics Warehouse
 
 An end-to-end NBA analytics engineering project that combines player performance, team performance, salaries, salary-cap context, and historical trades in a relational data warehouse.
