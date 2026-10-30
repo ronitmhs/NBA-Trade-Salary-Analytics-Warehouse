@@ -1,0 +1,247 @@
+version: 2
+
+models:
+  - name: stg_players
+    description: Clean staging view of the NBA player dimension.
+
+    columns:
+      - name: player_id
+        description: Unique NBA player identifier.
+        data_tests:
+          - unique
+          - not_null
+
+      - name: full_name
+        data_tests:
+          - not_null
+
+      - name: is_active
+        data_tests:
+          - not_null
+
+
+  - name: stg_teams
+    description: Clean staging view of the NBA team dimension.
+
+    columns:
+      - name: team_id
+        description: Unique NBA team identifier.
+        data_tests:
+          - unique
+          - not_null
+
+      - name: abbreviation
+        data_tests:
+          - unique
+          - not_null
+
+      - name: full_name
+        data_tests:
+          - not_null
+
+
+  - name: stg_seasons
+    description: NBA season dimension.
+
+    columns:
+      - name: season_id
+        data_tests:
+          - unique
+          - not_null
+
+      - name: season
+        data_tests:
+          - unique
+          - not_null
+
+      - name: start_year
+        data_tests:
+          - not_null
+
+      - name: end_year
+        data_tests:
+          - not_null
+
+
+  - name: stg_player_season_stats
+    description: Player performance at the player-season grain.
+
+    columns:
+      - name: player_season_stat_id
+        data_tests:
+          - unique
+          - not_null
+
+      - name: player_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_players')
+                field: player_id
+
+      - name: season_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_seasons')
+                field: season_id
+
+
+  - name: stg_team_season_stats
+    description: Team performance at the team-season grain.
+
+    columns:
+      - name: team_season_stat_id
+        data_tests:
+          - unique
+          - not_null
+
+      - name: team_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_teams')
+                field: team_id
+
+      - name: season_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_seasons')
+                field: season_id
+
+
+  - name: stg_player_salaries
+    description: Player salary facts with salary-cap metrics.
+
+    columns:
+      - name: salary_id
+        data_tests:
+          - unique
+          - not_null
+
+      - name: player_id
+        description: >
+          Nullable because some salary records cannot be resolved
+          to the NBA player dimension.
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_players')
+                field: player_id
+
+      - name: team_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_teams')
+                field: team_id
+
+      - name: season_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_seasons')
+                field: season_id
+
+      - name: salary
+        data_tests:
+          - not_null
+
+      - name: salary_cap
+        data_tests:
+          - not_null
+
+
+  - name: stg_trades
+    description: Normalized NBA trade events.
+
+    columns:
+      - name: trade_id
+        data_tests:
+          - unique
+          - not_null
+
+      - name: trade_date
+        data_tests:
+          - not_null
+
+      - name: season_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_seasons')
+                field: season_id
+
+
+  - name: stg_trade_teams
+    description: Bridge between NBA trades and participating teams.
+
+    columns:
+      - name: trade_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_trades')
+                field: trade_id
+
+      - name: team_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_teams')
+                field: team_id
+
+
+  - name: stg_trade_assets
+    description: >
+      Assets acquired by teams in NBA trades, including players,
+      draft picks, draft rights, cash, pick swaps and exceptions.
+
+    columns:
+      - name: trade_asset_id
+        data_tests:
+          - unique
+          - not_null
+
+      - name: trade_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_trades')
+                field: trade_id
+
+      - name: receiving_team_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_teams')
+                field: team_id
+
+      - name: asset_type
+        data_tests:
+          - not_null
+
+      - name: asset_description
+        data_tests:
+          - not_null
+
+      - name: player_id
+        description: >
+          Nullable because 16 player trade assets remain unresolved.
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_players')
+                field: player_id

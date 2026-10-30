@@ -32,3 +32,8 @@ data/processed/*
 dbt/target/
 dbt/logs/
 dbt/dbt_packages/
+
+# dbt generated files
+dbt/nba_analytics/target/
+dbt/nba_analytics/logs/
+dbt/nba_analytics/dbt_packages/

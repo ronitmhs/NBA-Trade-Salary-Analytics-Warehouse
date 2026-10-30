@@ -1,0 +1,149 @@
+version: 2
+
+models:
+  - name: mart_player_value
+    description: >
+      Player-season salary and production analytics mart.
+      Compares each qualifying player's salary percentile
+      with their production percentile within the same season.
+
+    columns:
+      - name: player_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_players')
+                field: player_id
+
+      - name: season_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_seasons')
+                field: season_id
+
+      - name: player_name
+        data_tests:
+          - not_null
+
+      - name: season
+        data_tests:
+          - not_null
+
+      - name: total_salary
+        data_tests:
+          - not_null
+
+      - name: production_score
+        data_tests:
+          - not_null
+
+
+  - name: mart_team_payroll_efficiency
+    description: >
+      Team-season payroll efficiency mart comparing team payroll
+      spending with regular-season wins and cost per win.
+
+    columns:
+      - name: team_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_teams')
+                field: team_id
+
+      - name: season_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_seasons')
+                field: season_id
+
+      - name: team_name
+        data_tests:
+          - not_null
+
+      - name: season
+        data_tests:
+          - not_null
+
+      - name: total_payroll
+        data_tests:
+          - not_null
+
+      - name: wins
+        data_tests:
+          - not_null
+
+      - name: efficiency_rank
+        data_tests:
+          - not_null
+
+
+  - name: mart_trade_acquisition_value
+    description: >
+      Trade acquisition analytics mart comparing the salary
+      and full-season production of players acquired in NBA trades.
+      Performance represents full-season statistics rather than
+      post-trade-only performance.
+
+    columns:
+      - name: trade_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_trades')
+                field: trade_id
+
+      - name: player_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_players')
+                field: player_id
+
+      - name: receiving_team_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_teams')
+                field: team_id
+
+      - name: season_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_seasons')
+                field: season_id
+
+      - name: trade_date
+        data_tests:
+          - not_null
+
+      - name: player_name
+        data_tests:
+          - not_null
+
+      - name: receiving_team
+        data_tests:
+          - not_null
+
+      - name: total_salary
+        data_tests:
+          - not_null
+
+      - name: production_score
+        data_tests:
+          - not_null
+
+      - name: value_gap
+        data_tests:
+          - not_null

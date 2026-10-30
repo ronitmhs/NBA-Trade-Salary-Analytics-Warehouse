@@ -1,0 +1,50 @@
+version: 2
+
+sources:
+  - name: nba_warehouse
+    description: >
+      Core NBA analytics warehouse tables loaded into PostgreSQL
+      by the Python ingestion pipeline.
+
+    database: nba_analytics
+    schema: public
+
+    tables:
+      - name: players
+        description: NBA player dimension.
+
+      - name: teams
+        description: NBA team dimension.
+
+      - name: seasons
+        description: NBA season dimension.
+
+      - name: player_season_stats
+        description: >
+          One row per player and season containing
+          full-season player performance statistics.
+
+      - name: team_season_stats
+        description: >
+          One row per team and season containing
+          full-season team performance statistics.
+
+      - name: player_salaries
+        description: >
+          Player salary facts containing salary and
+          salary-cap metrics.
+
+      - name: trades
+        description: >
+          Normalized NBA trade events.
+
+      - name: trade_teams
+        description: >
+          Bridge table connecting trades to participating
+          NBA teams.
+
+      - name: trade_assets
+        description: >
+          Assets acquired by teams in trades, including
+          players, draft picks, draft rights, cash,
+          pick swaps and trade exceptions.
